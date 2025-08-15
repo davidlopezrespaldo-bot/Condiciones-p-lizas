@@ -1,0 +1,1613 @@
+<html lang="es"><head><script>(function(firebaseConfig, initialAuthToken, appId) {
+        window.__firebase_config = firebaseConfig;
+        window.__initial_auth_token = initialAuthToken;
+        window.__app_id = appId;
+            })("\n{\n  \"apiKey\": \"AIzaSyCqyCcs2R2e7AegGjvFAwG98wlamtbHvZY\",\n  \"authDomain\": \"bard-frontend.firebaseapp.com\",\n  \"projectId\": \"bard-frontend\",\n  \"storageBucket\": \"bard-frontend.firebasestorage.app\",\n  \"messagingSenderId\": \"175205271074\",\n  \"appId\": \"1:175205271074:web:2b7bd4d34d33bf38e6ec7b\"\n}\n","eyJhbGciOiJSUzI1NiIsImtpZCI6ImM0ODdlNzA0ZTM4NzM5MmM3MGM0MWJhMmFjZWNiZjIxOTY2ZDIxYmMiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJmaXJlYmFzZS1hZG1pbnNkay1mYnN2Y0BiYXJkLWZyb250ZW5kLmlhbS5nc2VydmljZWFjY291bnQuY29tIiwiYXVkIjoiaHR0cHM6XC9cL2lkZW50aXR5dG9vbGtpdC5nb29nbGVhcGlzLmNvbVwvZ29vZ2xlLmlkZW50aXR5LmlkZW50aXR5dG9vbGtpdC52MS5JZGVudGl0eVRvb2xraXQiLCJ1aWQiOiIwMzA2NzM3OTg2NzA0NTU3Njk1OCIsImlzcyI6ImZpcmViYXNlLWFkbWluc2RrLWZic3ZjQGJhcmQtZnJvbnRlbmQuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLCJjbGFpbXMiOnsiYXBwSWQiOiJlNmY1OGI1ZTU0MjQtcG9saWN5X3ZpZXdlci02MTMifSwiZXhwIjoxNzU1MjIwNTY1LCJpYXQiOjE3NTUyMTY5NjUsImFsZyI6IlJTMjU2In0.SsSy_0q9wdeXKUHac5Sf1fTr3usQACTX6XfWfJYwsH76eUJjwcSYdAywk7xjJRy_wNFTOlBNSbPEb69R0Sk_Alxfof9Qr2cSw2bLDAV0sa87Tua_h1RfmxWtMcDlOqfcINdNWbY715j-aARl_wiAud4768vJ1-uXHifnCbwXZSAmRQqsTKvddLz5Pgy94q40woqhyZ8afSwvlHKIjzPnvy6LbZOssSQQ11tBqTn67rEPB8gvvr7a4UhNY-HOaXXerbwxzlvkD02cxaWlym5M10SUsv-vthYgH0i6LJ3vHWtkVWGs2b7AX62osRjqEAhderkpzT-H61VT5Np4dRr9uw","e6f58b5e5424-policy_viewer-613")</script><script>(function() {
+  // Ensure this script is executed only once
+  if (window.firebaseAuthBridgeScriptLoaded) {
+    return;
+  }
+  window.firebaseAuthBridgeScriptLoaded = true;
+
+  let nextTokenPromiseId = 0;
+
+  // Stores { resolve, reject } for ongoing token requests
+  const pendingTokenPromises = {};
+
+  // Listen for messages from the Host Application
+  window.addEventListener('message', function(event) {
+
+    const messageData = event.data;
+
+  if (messageData && messageData.type === 'RESOLVE_NEW_FIREBASE_TOKEN') {
+      const { success, token, error, promiseId } = messageData ?? {};
+      if (pendingTokenPromises[promiseId]) {
+        if (success) {
+          pendingTokenPromises[promiseId].resolve(token);
+        } else {
+          pendingTokenPromises[promiseId].reject(new Error(error || 'Token refresh failed from host.'));
+        }
+        delete pendingTokenPromises[promiseId];
+      }
+    }
+  });
+
+  // Expose a function for the Generated App to request a new Firebase token
+  window.requestNewFirebaseToken = function() {
+    const currentPromiseId = nextTokenPromiseId++;
+    const promise = new Promise((resolve, reject) => {
+      pendingTokenPromises[currentPromiseId] = { resolve, reject };
+    });
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'REQUEST_NEW_FIREBASE_TOKEN',
+        promiseId: currentPromiseId
+      }, '*');
+    } else {
+      pendingTokenPromises[currentPromiseId].reject(new Error('No parent window to request token from.'));
+      delete pendingTokenPromises[currentPromiseId];
+    }
+    return promise;
+  };
+})();</script><script>
+let realOriginalGetUserMedia = null;
+if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+  realOriginalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+}
+
+(function() {
+  if (navigator.mediaDevices && navigator.mediaDevices.__proto__) {
+    try {
+      Object.defineProperty(navigator.mediaDevices.__proto__, 'getUserMedia', {
+        get: function() {
+          return undefined; // Or throw an error
+        },
+        configurable: false
+      });
+    } catch (error) {
+      console.error("Error defining prototype getter:", error);
+    }
+  }
+})();
+
+(function() {
+  const pendingMediaResolvers = {};
+  let nextMediaPromiseId = 0;
+
+  function requestMediaPermissions(constraints) {
+    const mediaPromiseId = nextMediaPromiseId++;
+    const promise = new Promise((resolve, reject) => {
+      pendingMediaResolvers[mediaPromiseId] = (granted) => {
+        delete pendingMediaResolvers[mediaPromiseId];
+        resolve(granted);
+      };
+    });
+
+    window.parent.postMessage({
+      type: 'requestMediaPermission',
+      constraints: constraints,
+      promiseId: mediaPromiseId,
+    }, '*');
+
+    return promise;
+  }
+
+  let originalGetUserMedia = realOriginalGetUserMedia;
+
+  function interceptGetUserMedia() {
+    if (navigator.mediaDevices) {
+      Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+        value: function(constraints) {
+          return requestMediaPermissions(constraints).then((granted) => {
+            if (granted) {
+              if (originalGetUserMedia) {
+                return originalGetUserMedia(constraints);
+              } else {
+                throw new Error("Original getUserMedia not available.");
+              }
+            } else {
+              throw new DOMException('Permission denied', 'NotAllowedError');
+            }
+          });
+        },
+        writable: false,
+        configurable: false
+      });
+    }
+  }
+
+  interceptGetUserMedia();
+
+  const observer = new MutationObserver(function(mutationsList, observer) {
+    for (const mutation of mutationsList) {
+      if (mutation.type === 'reconfigured' && mutation.name === 'getUserMedia' && mutation.object === navigator.mediaDevices) {
+        interceptGetUserMedia();
+      } else if (mutation.type === 'attributes' && mutation.attributeName === 'getUserMedia' && mutation.target === navigator.mediaDevices) {
+        interceptGetUserMedia();
+      } else if (mutation.type === 'childList' && mutation.addedNodes) {
+        mutation.addedNodes.forEach(node => {
+          if (node === navigator.mediaDevices) {
+            interceptGetUserMedia();
+          }
+        });
+      }
+    }
+  });
+
+  function interceptSpeechRecognition() {
+    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+      return;
+    }
+
+    const OriginalSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    const SpeechRecognitionWrapper = function(...args) {
+      const recognizer = new OriginalSpeechRecognition(...args);
+      const originalStart = recognizer.start.bind(recognizer);
+
+      recognizer.start = function() {
+        requestMediaPermissions({ audio: true }).then(granted => {
+          if (granted) {
+            originalStart();
+          } else {
+            const errorEvent = new SpeechRecognitionErrorEvent('error');
+            errorEvent.error = 'not-allowed'; // This is the standard error for permission denial.
+            recognizer.dispatchEvent(errorEvent);
+          }
+        });
+      };
+
+      return recognizer;
+    };
+
+    SpeechRecognitionWrapper.prototype = OriginalSpeechRecognition.prototype;
+    SpeechRecognitionWrapper.prototype.constructor = SpeechRecognitionWrapper;
+
+    if (window.SpeechRecognition) {
+      window.SpeechRecognition = SpeechRecognitionWrapper;
+    }
+    if (window.webkitSpeechRecognition) {
+      window.webkitSpeechRecognition = SpeechRecognitionWrapper;
+    }
+  }
+
+  interceptSpeechRecognition();
+
+  window.addEventListener('message', function(event) {
+    if (event.data) {
+      if (event.data.type === 'resolveMediaPermission') {
+        const { promiseId, granted } = event.data;
+        if (pendingMediaResolvers[promiseId]) {
+          pendingMediaResolvers[promiseId](granted);
+        }
+      }
+    }
+  });
+
+})();</script><script>((function(modelInformation) {
+  const originalFetch = window.fetch;
+  // TODO: b/421908508 - Move these out of the script and match all generative AI model calls.
+  let googleLlmBaseApiUrls = [
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.textModelName + ':streamGenerateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.textModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageModelName + ':predict',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageModelName + ':predictLongRunning',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageEditModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.videoModelName + ':predict',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.videoModelName + ':predictLongRunning',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.ttsModelName + ':generateContent',
+  ];
+  modelInformation.deprecatedTextModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+    );
+  });
+
+  const pendingFetchResolvers = {};
+  let nextPromiseId = 0;
+
+  function handleStringInput(input, optionsArgument) {
+    const actualUrl = input;
+    const fetchCallArgs = [actualUrl, optionsArgument];
+    const effectiveOptions = optionsArgument || {};
+    const bodyForApiKeyCheck = effectiveOptions.body;
+    const bodyForPostMessage = effectiveOptions.body;
+    return { actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage };
+  }
+
+  function handleRequestInput(input, optionsArgument) {
+    const actualUrl = input.url;
+    const fetchCallArgs = [input, optionsArgument];
+    const effectiveOptions = { method: input.method, headers: new Headers(input.headers) };
+    let bodyForApiKeyCheck;
+    let bodyForPostMessage;
+
+    if (optionsArgument) {
+      if (optionsArgument.method) effectiveOptions.method = optionsArgument.method;
+      if (optionsArgument.headers) effectiveOptions.headers = new Headers(optionsArgument.headers);
+      if ('body' in optionsArgument) {
+        bodyForApiKeyCheck = optionsArgument.body;
+        bodyForPostMessage = optionsArgument.body;
+      } else {
+        bodyForApiKeyCheck = undefined;
+        bodyForPostMessage = input.body;
+      }
+    } else {
+      bodyForApiKeyCheck = undefined;
+      bodyForPostMessage = input.body;
+    }
+    return { actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage };
+  }
+
+  window.fetch = function(input, optionsArgument) {
+    let actualUrl;
+    let fetchCallArgs;
+    let effectiveOptions = {};
+    let bodyForApiKeyCheck;
+    let bodyForPostMessage;
+
+    if (typeof input === 'string') {
+      ({actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage} = handleStringInput(input, optionsArgument));
+    } else if (input instanceof Request) {
+      ({actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage} = handleRequestInput(input, optionsArgument));
+    } else {
+      return originalFetch.apply(window, [input, optionsArgument]);
+    }
+
+    effectiveOptions.method = effectiveOptions.method || 'GET';
+    if (!effectiveOptions.headers) {
+      effectiveOptions.headers = new Headers();
+    }
+
+
+    if (typeof actualUrl === 'string' && googleLlmBaseApiUrls.some((url) => actualUrl.startsWith(url))) {
+      let apiKeyIsNull = true;
+
+      const regex = new RegExp("models/([^:]+)");
+      const modelNameMatch = actualUrl.match(regex);
+      const modelName = modelNameMatch ? modelNameMatch[1] : 'unspecified';
+
+
+      try {
+        const urlObject = new URL(actualUrl);  // Use URL object for robust parsing
+        const apiKeyParam = urlObject.searchParams.get('key');
+        if (apiKeyParam) {
+          apiKeyIsNull = false;
+        }
+      } catch (e) {
+        // Continue checks even if URL parsing fails
+      }
+
+      if (apiKeyIsNull && effectiveOptions.headers) {
+        const h = new Headers(effectiveOptions.headers);
+        const apiKeyHeaderValue = h.get('X-API-Key') || h.get('x-api-key');
+        if (apiKeyHeaderValue) {
+          apiKeyIsNull = false;
+          return originalFetch.apply(window, fetchCallArgs);
+        }
+      }
+
+      if (apiKeyIsNull && effectiveOptions.method && ['POST', 'PUT', 'PATCH'].includes(effectiveOptions.method.toUpperCase()) && typeof bodyForApiKeyCheck === 'string') {
+        try {
+          const bodyData = JSON.parse(bodyForApiKeyCheck);
+          if (bodyData && bodyData.apiKey) {
+            apiKeyIsNull = false;
+            return originalFetch.apply(window, fetchCallArgs);
+          }
+        } catch (e) {
+          // Ignore JSON parsing errors
+        }
+      }
+
+      if(apiKeyIsNull) {
+        const promiseId = nextPromiseId++;
+        const promise = new Promise((resolve) => {
+          pendingFetchResolvers[promiseId] = (resolvedResponse) => {
+            delete pendingFetchResolvers[promiseId];
+            resolve(resolvedResponse);
+          };
+        });
+
+        let serializedBodyForPostMessage;
+        if (typeof bodyForPostMessage === 'string' || bodyForPostMessage == null) {
+            serializedBodyForPostMessage = bodyForPostMessage;
+        } else if (bodyForPostMessage instanceof ReadableStream) {
+            serializedBodyForPostMessage = null;
+        } else {
+            try {
+                serializedBodyForPostMessage = JSON.stringify(bodyForPostMessage);
+            } catch (e) {
+                serializedBodyForPostMessage = null;
+            }
+        }
+
+        const messageOptions = {
+            method: effectiveOptions.method,
+            headers: Object.fromEntries(new Headers(effectiveOptions.headers).entries()),
+            body: serializedBodyForPostMessage
+        };
+
+        window.parent.postMessage({
+          type: 'requestFetch',
+          url: actualUrl,
+          modelName: modelName,
+          options: messageOptions,
+          promiseId: promiseId,
+        }, '*');
+
+        return promise;
+      }
+      return originalFetch.apply(window, fetchCallArgs);
+    }
+    return originalFetch.apply(window, fetchCallArgs);
+  };
+
+  window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'resolveFetch') {
+      const { promiseId, response } = event.data;
+      if (pendingFetchResolvers[promiseId]) {
+        try {
+          const reconstructedResponse = new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: new Headers(response.headers),
+          });
+          pendingFetchResolvers[promiseId](reconstructedResponse);
+        } catch (error) {
+          pendingFetchResolvers[promiseId](new Response(null, { status: 500, statusText: "Interceptor Response Reconstruction Error" }));
+        }
+      }
+    }
+  });
+
+}))({"textModelName":"gemini-2.5-flash-preview-05-20","imageModelName":"imagen-3.0-generate-002","imageEditModelName":"gemini-2.0-flash-preview-image-generation","videoModelName":"veo-2.0-generate-001","ttsModelName":"gemini-2.5-flash-preview-tts","deprecatedTextModelNames":["gemini-2.0-flash","gemini-2.5-flash-preview-04-17"]})</script><script>(function() {
+  const originalConsoleLog = console.log;
+  const originalConsoleError = console.error;
+
+    /**
+   * Normalizes an error event or a promise rejection reason into a structured error object.
+   * @param {*} errorEventOrReason The error object or reason.
+   * @return {object} Structured error data { message, name, stack }.
+   */
+  function getErrorObject(errorEventOrReason) {
+    if (errorEventOrReason instanceof Error) {
+      return {
+        message: errorEventOrReason.message,
+        name: errorEventOrReason.name,
+        stack: errorEventOrReason.stack,
+      };
+    }
+    // Fallback for non-Error objects.
+    try {
+      return {
+        message: JSON.stringify(errorEventOrReason),
+        name: 'UnknownErrorType',
+        stack: null,
+      };
+    } catch (e) {
+      return {
+        message: String(errorEventOrReason),
+        name: 'UnknownErrorTypeNonStringifiable',
+        stack: null,
+      };
+    }
+  }
+
+  /**
+   * Converts an array of arguments (from log/error) into a single string.
+   * Handles Error objects specially to include their message and stack.
+   * @param {Array<*>} args - Arguments passed to console methods.
+   * @return {string} A string representation of the arguments.
+   */
+  function stringifyArgs(args) {
+    return args
+      .map((arg) => {
+        if (arg instanceof Error) {
+          const {message, stack} = arg;
+          return `Error: ${message}${stack ? ('\nStack: ' + stack) : ''}`;
+        }
+        if (typeof arg === 'object' && arg !== null) {
+          try {
+            return JSON.stringify(arg);
+          } catch (error) {
+            return '[Circular Object]';
+          }
+        } else {
+          return String(arg);
+        }
+      })
+      .join(' ');
+  }
+
+  console.log = function(...args) {
+    const logString = stringifyArgs(args);
+    window.parent.postMessage({ type: 'log', message: logString }, '*');
+    originalConsoleLog.apply(console, args);
+  };
+
+  console.error = function(...args) {
+    let errorData;
+    if (args.length > 0 && args[0] instanceof Error) {
+      const err = args[0];
+      // If the first arg is an Error, capture its details.
+      errorData = {
+        type: 'error',
+        source: 'CONSOLE_ERROR',
+        ...getErrorObject(err),
+        rawArgsString: stringifyArgs(args.slice(1)),
+        timestamp: new Date().toISOString(),
+      };
+    } else {
+      // If not an Error object, treat all args as a general error message.
+      errorData = {
+        type: 'error',
+        source: 'CONSOLE_ERROR',
+        message: stringifyArgs(args),
+        name: 'ConsoleLoggedError',
+        stack: null,
+        timestamp: new Date().toISOString(),
+      };
+    }
+    window.parent.postMessage(errorData, '*');
+    originalConsoleError.apply(console, args);
+  };
+
+  // Listen for global unhandled synchronous errors.
+  window.addEventListener('error', function(event) {
+    const errorDetails = event.error ? getErrorObject(event.error) : {
+      message: event.message,
+      name: 'GlobalError',
+      stack: null,
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno,
+    };
+
+    window.parent.postMessage({
+      type: 'error',
+      source: 'global',
+      ...errorDetails,
+      message: errorDetails.message || event.message,
+      timestamp: new Date().toISOString(),
+    }, '*');
+  });
+
+  // Listen for unhandled promise rejections (asynchronous errors).
+  window.addEventListener('unhandledrejection', function(event) {
+    const errorDetails = getErrorObject(event.reason);
+
+    window.parent.postMessage({
+      type: 'error',
+      source: 'unhandledrejection',
+      ...errorDetails,
+      message: errorDetails.message || 'Unhandled Promise Rejection',
+      timestamp: new Date().toISOString(),
+    }, '*');
+  });
+
+})();</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resumen de Condiciones y Alcance de Servicio</title>
+    <!-- Enlace a la fuente Inter de Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&amp;display=swap" rel="stylesheet">
+    <!-- Enlace a Font Awesome para los íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Definición de variables CSS para la paleta de colores original */
+        :root {
+            --color-principal: #75CEC8; /* Azul mochima */
+            --color-neutro-gris: #667674; /* Gris tepuy */
+            --color-neutro-blanco: #FFFFFF; /* Blanco */
+            --color-realce-positivo: #ABD42E; /* Verde sabana */
+            --color-realce-negativo: #F44336; /* Rojo de contraste sugerido */
+        }
+        
+        /* Estilos generales del cuerpo */
+        body {
+            font-family: 'Inter', sans-serif; /* Tipografía principal */
+            background-color: #f0f2f5; /* Un fondo ligeramente gris para el cuerpo */
+            color: var(--color-neutro-gris);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            text-align: center; /* Centrar el texto por defecto en el cuerpo */
+            position: relative; /* Necesario para posicionar el botón de descarga fijo */
+            min-height: 100vh; /* Asegura que el cuerpo ocupe al menos toda la altura de la ventana */
+            padding-bottom: 80px; /* Espacio para el botón fijo en la parte inferior */
+        }
+        /* Nuevo contenedor para el bloque superior combinado (encabezado + datos de póliza) */
+        .top-block {
+            max-width: 900px;
+            margin: 20px auto 0; /* Margenes para el bloque completo y centrado horizontalmente */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px; /* Bordes redondeados para todo el bloque */
+            overflow: hidden; /* Asegura que los elementos internos respeten los bordes redondeados */
+        }
+        /* Contenido principal del encabezado (título y subtítulo) */
+        .main-header-content {
+            background-color: var(--color-neutro-blanco); /* Fondo blanco para el encabezado */
+            color: var(--color-neutro-gris); /* Color de texto por defecto para el encabezado */
+            padding: 25px 20px 15px; /* Espaciado interno */
+            text-align: center; /* Centrar el texto dentro del encabezado */
+        }
+        .main-header-content h1 {
+            font-size: 2.2em;
+            margin: 0;
+            /* Aumenta el peso de la fuente para hacerla más marcada */
+            font-weight: 800; 
+            color: var(--color-principal); /* Título en azul mochima */
+            /* Añadir un sutil text-shadow para que resalte más, si es necesario */
+            text-shadow: 0px 0px 1px rgba(0, 0, 0, 0.1); 
+        }
+        .main-header-content #contratante-section { /* Estilo para el subtítulo "Contratante: Banco Plaza" */
+            font-size: 1.2em;
+            margin: 5px 0 0 0;
+            /* Aumenta el peso de la fuente para hacerla más marcada */
+            font-weight: 700; 
+            color: var(--color-realce-positivo); /* Subtítulo en verde sabana */
+            /* Añadir un sutil text-shadow para que resalte más, si es necesario */
+            text-shadow: 0px 0px 1px rgba(0, 0, 0, 0.1);
+            display: flex; /* Usar flexbox para alinear el texto y el selector */
+            justify-content: center; /* Centrar horizontalmente */
+            align-items: center; /* Alinear verticalmente */
+            gap: 10px; /* Espacio entre el texto y el selector */
+        }
+        /* Estilos para el select de pólizas */
+        .policy-selector {
+            width: 80%;
+            max-width: 300px; /* Limitar el ancho del selector para que no sea demasiado largo */
+            padding: 10px;
+            /* margin: 15px auto 20px auto; se maneja con flexbox en el padre */
+            display: block; 
+            border: 1px solid var(--color-principal);
+            border-radius: 5px;
+            background-color: var(--color-neutro-blanco);
+            font-family: 'Inter', sans-serif;
+            font-size: 1em;
+            color: var(--color-neutro-gris);
+            appearance: none; /* Elimina estilos por defecto del sistema operativo */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2375CEC8%22%20d%3D%22M287%20197.3L159.2%2069.5c-4.1-4.1-10.8-4.1-14.9%200L5.4%20197.3c-4.1%204.1-4.1%2010.8%200%2014.9l14.9%2014.9c4.1%204.1%2010.8%204.1%2014.9%200L144.6%20118.8c4.1-4.1%2010.8-4.1%2014.9%200l119.3%20119.3c4.1%204.1%2010.8%204.1%2014.9%200l14.9-14.9c4.1-4.1%204.1-10.9%200-14.9z%22%2F%3E%3C%2Fsvg%3E'); /* Flecha personalizada */
+            background-repeat: no-repeat;
+            background-position: right 10px top 50%;
+            background-size: 12px auto;
+        }
+        /* Estilos para el bloque de datos de la póliza (la parte gris con letras blancas) */
+        .policy-data-block {
+            list-style: none;
+            padding: 15px 20px; /* Espaciado interno */
+            margin: 0;
+            display: flex;
+            justify-content: space-around; /* Distribuye el espacio uniformemente alrededor de los elementos */
+            align-items: center; /* Centra los elementos verticalmente */
+            flex-wrap: wrap;
+            background-color: var(--color-neutro-gris); /* Fondo gris */
+            color: var(--color-neutro-blanco); /* Texto blanco para etiquetas */
+            border-top: 1px solid rgba(255, 255, 255, 0.2); /* Separador visual */
+            /* Removed gap as space-around handles spacing more flexibly */
+        }
+        .policy-data-block li {
+            /* flex: 1; is removed to allow content to dictate width */
+            text-align: center; /* Centra el texto dentro de cada elemento de la lista */
+            padding: 0 15px; /* Padding horizontal para dar espacio entre contenido y separadores */
+            position: relative; /* Necesario para posicionar el pseudo-elemento del separador */
+            min-width: 80px; /* Asegura un ancho mínimo para columnas con contenido corto */
+        }
+        .policy-data-block li:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 15%; /* Alineación vertical del separador */
+            height: 70%; /* Altura del separador */
+            width: 1px;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        .policy-data-block span {
+            display: block;
+            font-weight: 700;
+            color: var(--color-neutro-blanco); /* Texto blanco para los valores */
+            white-space: nowrap; /* Evita que el texto se envuelva en pantallas grandes */
+        }
+        /* Media query para pantallas más pequeñas: permitir que el texto se envuelva */
+        @media (max-width: 768px) {
+            .policy-data-block {
+                flex-direction: column;
+                padding-top: 10px;
+                gap: 10px; /* Reducir el espacio entre elementos en dispositivos móviles */
+            }
+            .policy-data-block li {
+                width: 100%; /* Ocupar todo el ancho en modo columna */
+                border-right: none; /* No necesitamos bordes verticales en modo columna */
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2); /* Separador horizontal */
+                padding: 10px 0; /* Ajustar padding para modo columna */
+            }
+            .policy-data-block li:last-child {
+                border-bottom: none; /* Elimina el borde del último elemento en modo columna */
+            }
+            /* Eliminar el pseudo-elemento en pantallas pequeñas para evitar duplicados/problemas */
+            .policy-data-block li::after {
+                content: none;
+            }
+            .policy-data-block span {
+                white-space: normal; /* Permitir que el texto se envuelva en pantallas pequeñas */
+            }
+            .main-header-content #contratante-section {
+                flex-direction: column; /* Apilar el texto y el selector en móviles */
+                gap: 5px;
+            }
+        }
+        
+        /* Contenedor principal para el resto del contenido (secciones de acordeón) */
+        .container {
+            max-width: 900px;
+            margin: 20px auto; /* Margen superior para separarse del bloque superior y centrado */
+            padding: 0 20px;
+            text-align: left; /* Restablecer la alineación de texto para el contenido principal */
+        }
+        /* Estilos para las secciones de contenido (tarjetas/paneles de acordeón) */
+        .section {
+            background-color: var(--color-neutro-blanco);
+            border-radius: 10px; /* Esquinas redondeadas para toda la tarjeta */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Sombra suave */
+            margin-top: 20px; /* Espacio entre las tarjetas */
+            overflow: hidden; /* Asegura que el contenido no se desborde */
+        }
+        .accordion-title {
+            background-color: var(--color-neutro-blanco); /* Fondo blanco para el título del acordeón */
+            color: var(--color-neutro-gris); /* Texto gris para el título */
+            padding: 15px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #ddd; /* Separador entre el título y el contenido cuando está abierto */
+            border-radius: 10px; /* Bordes redondeados para el título del acordeón (si es un único panel) */
+            text-align: left; /* Asegura que el título del acordeón no se centre */
+        }
+        .accordion-title:hover {
+            background-color: #f9f9f9; /* Ligero cambio de color al pasar el ratón */
+        }
+        .accordion-title i {
+            margin-right: 10px;
+            color: var(--color-principal); /* Color azul mochima para los íconos del acordeón */
+            transition: transform 0.3s ease; /* Transición suave para el ícono de flecha */
+        }
+        /* Estilos para la flecha del acordeón */
+        .accordion-title .fa-chevron-down {
+            margin-right: 0; /* Asegura que la flecha esté al final sin margen extra */
+            margin-left: 10px; /* Pequeño margen para separar del texto */
+        }
+        .accordion-content {
+            padding: 15px;
+            display: none; /* Oculto por defecto */
+            text-align: left; /* Asegura que el contenido del acordeón no se centre */
+        }
+        .accordion-content.active {
+            display: block; /* Visible cuando está activo */
+        }
+        /* Estilos para tablas */
+        table {
+            width: 100%;
+            border-collapse: collapse; /* Bordes de tabla colapsados */
+            margin-top: 15px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center; /* Centrar el texto en todas las celdas de la tabla */
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f4f4f4;
+            font-weight: 700;
+            color: var(--color-neutro-gris);
+        }
+        /* Clase para destacar el texto "Incluido" */
+        .included {
+            background-color: var(--color-realce-positivo);
+            color: var(--color-neutro-blanco);
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 5px;
+        }
+        /* Estilos para subtítulos de contenido dentro de los acordeones */
+        h3 {
+            color: var(--color-principal); /* Utilizar el color principal */
+            font-size: 1.5em;
+            margin-top: 20px;
+            border-left: 4px solid var(--color-principal); /* Borde decorativo a la izquierda */
+            padding-left: 10px;
+            text-align: left; /* Asegura que los subtítulos H3 estén alineados a la izquierda */
+        }
+        h4 {
+            color: var(--color-neutro-gris);
+            font-size: 1.2em;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            text-align: left; /* Asegura que los subtítulos H4 estén alineados a la izquierda */
+        }
+        ul, ol {
+            padding-left: 20px;
+            text-align: left; /* Asegura que las listas no se centren */
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        /* Media queries para diseño responsivo (continuación) */
+        @media (max-width: 768px) {
+            .main-header-content {
+                padding: 20px 15px;
+            }
+            .main-header-content h1 {
+                font-size: 1.8em;
+            }
+            /* Eliminar el margen inferior del h2 para que el selector se alinee mejor */
+            .main-header-content h2 {
+                margin-bottom: 0; 
+            }
+            /* ... estilos existentes para .policy-data-block en móvil ... */
+            .policy-selector {
+                width: 95%;
+            }
+            /* Asegurar que las celdas de la tabla tengan el texto centrado en móvil */
+            th, td {
+                text-align: center;
+            }
+            /* Ajuste para que la primera columna de la tabla (Cobertura) no se centre */
+            #coberturas-table th:first-child,
+            #coberturas-table td:first-child {
+                text-align: left;
+            }
+        }
+        /* Estilos para el botón de descarga - Posicionado en la esquina inferior derecha */
+        .download-button {
+            background-color: var(--color-principal); /* Color principal */
+            color: var(--color-neutro-blanco); /* Texto blanco */
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 700;
+            position: fixed; /* Posicionamiento fijo */
+            bottom: 20px; /* Distancia desde la parte inferior */
+            right: 20px; /* Distancia desde la parte derecha */
+            z-index: 1000; /* Asegura que esté por encima de otros elementos */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra para que resalte */
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .download-button:hover {
+            background-color: #5aa19c; /* Un tono más oscuro del color principal al pasar el ratón */
+            transform: translateY(-2px); /* Pequeño efecto al pasar el ratón */
+        }
+        .download-button:active {
+            transform: translateY(0); /* Vuelve a la posición original al hacer clic */
+        }
+    </style>
+</head>
+<body>
+    <div class="top-block">
+        <div class="main-header-content">
+            <!-- Título principal del documento -->
+            <h1>Resumen de Condiciones y Alcance de Servicio</h1>
+            <!-- El subtítulo y el selector ahora están juntos en un solo div -->
+            <div id="contratante-section">
+                <span>Contratante:</span> 
+                <select id="policySelector" class="policy-selector" onchange="loadPolicyData()"><option value="">Seleccione un Contratante</option><option value="10-14-2000925">DISTRIBUIDORA MOTOTAP, C.A.</option><option value="10-14-2000927">LUBRICANTES SOLOIL, C.A</option><option value="10-14-2000928">SOLOSON IMPORT, C.A</option><option value="10-14-2000926">TRANSPORTES LUGA S.R.L</option><option value="10-14-2001068">ESTAR SEGUROS, S.A.</option><option value="10-14-2001102">PLAYA GRANDE YACHTING CLUB A.C.</option><option value="09-14-2000026">CABLE PAR C.A.</option></select>
+            </div>
+        </div>
+        
+        <!-- Datos de la póliza integrados en el encabezado inferior (parte gris) -->
+        <ul class="policy-data-block">
+            <li>No. Póliza: <br><span id="policy-number"></span></li>
+            <li>VIGENCIA: <br><span id="policy-vigencia"></span></li>
+            <li>INTERMEDIARIO: <br><span id="policy-intermediario"></span></li>
+            <li>MONEDA: <br><span id="policy-moneda"></span></li>
+        </ul>
+    </div>
+    <div class="container">
+        <!-- Sección de Límites y Coberturas -->
+        <div class="accordion-item section">
+            <div class="accordion-title" onclick="toggleAccordion('panel1')">
+                <i class="fas fa-plus"></i>
+                Coberturas y Límites
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="accordion-content" id="panel1">
+                <table id="coberturas-table">
+                    <thead></thead>
+                    <tbody><tr><td colspan="5">Seleccione un Contratante para ver los detalles de la póliza.</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        <!-- Sección de Asistencia Médica Domiciliaria -->
+        <div class="accordion-item section">
+            <div class="accordion-title" onclick="toggleAccordion('panel-domiciliaria')">
+                <i class="fas fa-ambulance"></i> <!-- Ícono de ambulancia para asistencia domiciliaria -->
+                Asistencia Médica Domiciliaria
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="accordion-content" id="panel-domiciliaria"><p>Seleccione un Contratante para ver los detalles del servicio de asistencia médica domiciliaria.</p></div>
+        </div>
+        <!-- Sección de Atención Médica Primaria -->
+        <div class="accordion-item section">
+            <div class="accordion-title" onclick="toggleAccordion('panel-primaria')">
+                <i class="fas fa-clinic-medical"></i> <!-- Icono para atención primaria -->
+                Atención Médica Primaria
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="accordion-content" id="panel-primaria"><p>Seleccione un Contratante para ver los detalles del servicio de atención médica primaria.</p></div>
+        </div>
+        <!-- Sección de Servicio Odontológico -->
+        <div class="accordion-item section" id="odontologia-accordion-item" style="display: none;">
+            <div class="accordion-title" onclick="toggleAccordion('panel3')">
+                <i class="fas fa-tooth"></i>
+                Servicio Odontológico
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="accordion-content" id="panel3"></div>
+        </div>
+        <!-- Sección de Servicio Oftalmológico -->
+        <div class="accordion-item section" id="oftalmologia-accordion-item" style="display: none;">
+            <div class="accordion-title" onclick="toggleAccordion('panel4')">
+                <i class="fas fa-eye"></i>
+                Servicio Oftalmológico
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="accordion-content" id="panel4"></div>
+        </div>
+        <!-- Sección para Servicio Suministro de Medicamentos (Solo para Estar Seguros) -->
+        <div class="accordion-item section" id="medicamentos-section" style="display: none;">
+            <div class="accordion-title" onclick="toggleAccordion('panel-medicamentos')">
+                <i class="fas fa-pills"></i> <!-- Ícono para medicamentos -->
+                Servicio Suministro de Medicamentos
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="accordion-content" id="panel-medicamentos"></div>
+        </div>
+        <!-- La sección de Servicios Funerarios se ha eliminado del acordeón -->
+    </div>
+    <!-- Botón de descarga - Fuera del top-block para posicionamiento fijo -->
+    <button class="download-button" onclick="downloadHtml()">
+        <i class="fas fa-download"></i> Descargar HTML
+    </button>
+    
+    <script>
+        // Objeto que contiene toda la información de las pólizas
+        const policyData = {
+            "10-14-2000925": { // DISTRIBUIDORA MOTOTAP, C.A.
+                contratante: "DISTRIBUIDORA MOTOTAP, C.A.",
+                polizaNro: "10-14-2000925",
+                intermediario: "CASTRILLO PALACIOS, JAIME JOSE",
+                vigencia: "16-03-2025 / 16-03-2026",
+                moneda: "DOLARES",
+                coberturas: [
+                    { name: "Suma Asegurada Básica", limits: ["7.000", "12.000", "25.000"] },
+                    { name: "Continuidad", limits: ["7.000", "12.000", "25.000"] },
+                    { name: "Covid-19", limits: ["7.000", "12.000", "25.000"] },
+                    { name: "Atención Medica Primaria De Salud", limits: ["2.000", "2.500", "5.000"] },
+                    { name: "Maternidad", limits: ["3.000", "4.000", "No contrata"] },
+                    { name: "Asistencia Médica Domiciliaria", limits: ["Incluido", "Incluido", "Incluido"] },
+                    { name: "Servicios de Odontología", limits: ["Por servicio", "Por servicio", "Por servicio"] },
+                    { name: "Servicios de Oftalmológica", limits: ["Por servicio", "Por servicio", "Por servicio"] }
+                ],
+                servicioDomiciliario: `
+                    <h3>Servicio de Asistencia Médica Domiciliaria:</h3>
+                    <p>Atención médica profesional, las 24 horas del día, los 365 días del año.</p>
+                    <p>Este servicio incluye:</p>
+                    <ul>
+                        <li><b>Orientación médica telefónica:</b> Un médico te atenderá por teléfono para brindarte orientación médica, responder a tus preguntas y darte las recomendaciones necesarias.</li>
+                        <li><b>Orientación médica virtual:</b> A través de una video llamada, un médico podrá evaluarte, darte un diagnóstico y recetarte medicamentos si es necesario.</li>
+                        <li><b>Asistencia médica presencial:</b> Un equipo médico se trasladará a tu domicilio para atenderte, estabilizar tu situación de salud, aplicación de tratamientos en unidosis y si es necesario, remitirte a un centro hospitalario.</li>
+                        <li><b>Traslado en ambulancia:</b> En caso de que requieras atención hospitalaria urgente, te trasladaremos en una ambulancia equipada con todo lo necesario para garantizar tu seguridad y bienestar.</li>
+                        <li><b>Traslados programados:</b> Traslado en unidades especiales a centros hospitalarios para controles, estudios, altas médicas (con 48 horas de anticipación).</li>
+                        <li><b>Seguimiento médico post asistencia:</b> Un médico te dará seguimiento telefónico para monitorear tu evolución y asegurarte de que te estás recuperando adecuadamente.</li>
+                        <li><b>Entrega de medicamentos hasta por 7 días</b> (en caso de tratamientos agudos).</li>
+                        <li><b>Cobertura nacional:</b> Atención médica las 24 horas del día, los 365 días del año en todo el territorio nacional. En casos especiales, se gestionan puntos de encuentro.</li>
+                    </ul>
+                `,
+                atencionPrimaria: `
+                    <h3>Servicio de Atención Médica Primaria: Por año póliza</h3>
+                    <h4>¿Qué cubre mi cobertura de Atención Médica Primaria?</h4>
+                    <p>A través del servicio de Atención Médica Primaria, se podrán gestionar hasta el límite del servicios o suma asegurada contratada y disponible para el momento de la solicitud el siguiente protocolo según su alcance:</p>
+                    <ol>
+                        <li><b>Consulta Médica de Primer Contacto</b><br>Gestionadas por médicos de primer contacto: Generales, Internistas, Familiares, Pediatras.</li>
+                        <li><b>Consulta Médica con Especialista</b><br>Referidos por los médicos de primer contacto: Traumatología, Cardiología, Neumología, Otorrinolaringología, Gastroenterología, Fisiatría, Oncología, nefrología, Endocrinología, entre otras.</li>
+                        <li><b>Exámenes | Estudios | Laboratorios</b><br>Rx | Exámenes de Laboratorio | Ecosonogramas | Electrocardiogramas, otros estudios serán aprobados de acuerdo con el baremo establecido, A fin de determinar un diagnóstico y su tratamiento.</li>
+                    </ol>
+                `,
+                servicioOdontologico: `
+                    <h3>Descripción del Servicio Odontológico</h3>
+                    <ul>
+                        <li>Consultas a Nivel Nacional - Examen e Historia Clínica/ Diagnóstico/Plan de Tratamiento.</li>
+                        <li>2 Limpiezas simples y remoción del cálculo dental.</li>
+                        <li>2 Pulidos o remoción de manchas en esmalte dental.</li>
+                        <li>1 Aplicación tópica de flúor (hasta 12 años de edad).</li>
+                        <li>1 Aplicación de sellantes de fosas en molares (hasta 12 años de edad).</li>
+                        <li>Educación y Técnica del Cepillado.</li>
+                        <li>2 Extracciones simples.</li>
+                        <li>2 Extracciones quirúrgicas.</li>
+                        <li>Rayos X tomados por el odontólogo en el consultorio: coronales y peri-apicales (2 al año por asegurado).</li>
+                        <li>Panorámica (una al año por asegurado).</li>
+                        <li>4 resinas o amalgamas en dientes anteriores y posteriores.</li>
+                        <li>1 tratamiento conductivo en adultos y niños.</li>
+                        <li>2 restauraciones en el cuello del diente, vidrio econométrico, ya sea como base cavilaría clase V.</li>
+                        <li>2 pulpotomia y 2 pulpectomia</li>
+                        <li>Emergencias odontológicas en dientes, encías o prótesis.</li>
+                        <li>Emergencias Diurnas: son atendidas por un odontólogo a escala Nacional.</li>
+                        <li>Emergencias Nocturnas: son atendidas por un odontólogo de guardia.</li>
+                    </ul>
+                `,
+                servicioOftalmologico: `
+                    <h3>Descripción del Servicio Oftalmológico</h3>
+                    <ul>
+                        <li>Consultas a escala Nacional.</li>
+                        <li>Examen e historia clínica, diagnóstico y plan de tratamiento (2 al año por asegurado).</li>
+                        <li>Balance de los Movimientos Oculares.</li>
+                        <li>Discriminación de colores.</li>
+                        <li>Estudio de la Córnea, conjuntiva, cámara anterior, pupila y cristalino con lámpara de hendidura.</li>
+                        <li>Detección de glaucoma mediante gonios-copia.</li>
+                        <li>Estudio de la salud del fondo del Ojo.</li>
+                        <li>Cobertura adicional de montura o lentes: USD15$.</li>
+                        <li>Emergencias Diurnas: son atendidas por un oftalmólogo a escala Nacional.</li>
+                        <li>Emergencias Nocturnas: son atendidas vía telefónica por un oftalmólogo de guardia.</li>
+                    </ul>
+                `
+            },
+            "10-14-2000927": { // LUBRICANTES SOLOIL, C.A
+                contratante: "LUBRICANTES SOLOIL, C.A",
+                polizaNro: "10-14-2000927",
+                intermediario: "CASTRILLO PALACIOS, JAIME JOSE",
+                vigencia: "16-03-2025 / 16-03-2026",
+                moneda: "DOLARES",
+                coberturas: [
+                    { name: "Suma Asegurada Básica", limits: ["7.000", "12.000", "25.000"] },
+                    { name: "Continuidad", limits: ["7.000", "12.000", "25.000"] },
+                    { name: "Covid-19", limits: ["7.000", "12.000", "25.000"] },
+                    { name: "Atención Medica Primaria De Salud", limits: ["2.000", "2.500", "5.000"] },
+                    { name: "Maternidad", limits: ["3.000", "4.000", "No contrata"] },
+                    { name: "Asistencia Médica Domiciliaria", limits: ["Incluido", "Incluido", "Incluido"] },
+                    { name: "Servicios de Odontología", limits: ["Por servicio", "Por servicio", "Por servicio"] },
+                    { name: "Servicios de Oftalmológica", limits: ["Por servicio", "Por servicio", "Por servicio"] }
+                ],
+                servicioDomiciliario: `
+                    <h3>Servicio de Asistencia Médica Domiciliaria:</h3>
+                    <p>Atención médica profesional, las 24 horas del día, los 365 días del año.</p>
+                    <p>Este servicio incluye:</p>
+                    <ul>
+                        <li><b>Orientación médica telefónica:</b> Un médico te atenderá por teléfono para brindarte orientación médica, responder a tus preguntas y darte las recomendaciones necesarias.</li>
+                        <li><b>Orientación médica virtual:</b> A través de una video llamada, un médico podrá evaluarte, darte un diagnóstico y recetarte medicamentos si es necesario.</li>
+                        <li><b>Asistencia médica presencial:</b> Un equipo médico se trasladará a tu domicilio para atenderte, estabilizar tu situación de salud, aplicación de tratamientos en unidosis y si es necesario, remitirte a un centro hospitalario.</li>
+                        <li><b>Traslado en ambulancia:</b> En caso de que requieras atención hospitalaria urgente, te trasladaremos en una ambulancia equipada con todo lo necesario para garantizar tu seguridad y bienestar.</li>
+                        <li><b>Traslados programados:</b> Traslado en unidades especiales a centros hospitalarios para controles, estudios, altas médicas (con 48 horas de anticipación).</li>
+                        <li><b>Seguimiento médico post asistencia:</b> Un médico te dará seguimiento telefónico para monitorear tu evolución y asegurarte de que te estás recuperando adecuadamente.</li>
+                        <li><b>Entrega de medicamentos hasta por 7 días</b> (en caso de tratamientos agudos).</li>
+                        <li><b>Cobertura nacional:</b> Atención médica las 24 horas del día, los 365 días del año en todo el territorio nacional. En casos especiales, se gestionan puntos de encuentro.</li>
+                    </ul>
+                `,
+                atencionPrimaria: `
+                    <h3>Servicio de Atención Médica Primaria: Por año póliza</h3>
+                    <h4>¿Qué cubre mi cobertura de Atención Médica Primaria?</h4>
+                    <p>A través del servicio de Atención Médica Primaria, se podrán gestionar hasta el límite del servicios o suma asegurada contratada y disponible para el momento de la solicitud el siguiente protocolo según su alcance:</p>
+                    <ol>
+                        <li><b>Consulta Médica de Primer Contacto</b><br>Gestionadas por médicos de primer contacto: Generales, Internistas, Familiares, Pediatras.</li>
+                        <li><b>Consulta Médica con Especialista</b><br>Referidos por los médicos de primer contacto: Traumatología, Cardiología, Neumología, Otorrinolaringología, Gastroenterología, Fisiatría, Oncología, nefrología, Endocrinología, entre otras.</li>
+                        <li><b>Exámenes | Estudios | Laboratorios</b><br>Rx | Exámenes de Laboratorio | Ecosonogramas | Electrocardiogramas, otros estudios serán aprobados de acuerdo con el baremo establecido, A fin de determinar un diagnóstico y su tratamiento.</li>
+                    </ol>
+                `,
+                servicioOdontologico: `
+                    <h3>Descripción del Servicio Odontológico</h3>
+                    <ul>
+                        <li>Consultas a Nivel Nacional - Examen e Historia Clínica/ Diagnóstico/Plan de Tratamiento.</li>
+                        <li>2 Limpiezas simples y remoción del cálculo dental.</li>
+                        <li>2 Pulidos o remoción de manchas en esmalte dental.</li>
+                        <li>1 Aplicación tópica de flúor (hasta 12 años de edad).</li>
+                        <li>1 Aplicación de sellantes de fosas en molares (hasta 12 años de edad).</li>
+                        <li>Educación y Técnica del Cepillado.</li>
+                        <li>2 Extracciones simples.</li>
+                        <li>2 Extracciones quirúrgicas.</li>
+                        <li>Rayos X tomados por el odontólogo en el consultorio: coronales y peri-apicales (2 al año por asegurado).</li>
+                        <li>Panorámica (una al año por asegurado).</li>
+                        <li>4 resinas o amalgamas en dientes anteriores y posteriores.</li>
+                        <li>1 tratamiento conductivo en adultos y niños.</li>
+                        <li>2 restauraciones en el cuello del diente, vidrio econométrico, ya sea como base cavilaría clase V.</li>
+                        <li>2 pulpotomia y 2 pulpectomia</li>
+                        <li>Emergencias odontológicas en dientes, encías o prótesis.</li>
+                        <li>Emergencias Diurnas: son atendidas por un odontólogo a escala Nacional.</li>
+                        <li>Emergencias Nocturnas: son atendidas por un odontólogo de guardia.</li>
+                    </ul>
+                `,
+                servicioOftalmologico: `
+                    <h3>Descripción del Servicio Oftalmológico</h3>
+                    <ul>
+                        <li>Consultas a escala Nacional.</li>
+                        <li>Examen e historia clínica, diagnóstico y plan de tratamiento (2 al año por asegurado).</li>
+                        <li>Balance de los Movimientos Oculares.</li>
+                        <li>Discriminación de colores.</li>
+                        <li>Estudio de la Córnea, conjuntiva, cámara anterior, pupila y cristalino con lámpara de hendidura.</li>
+                        <li>Detección de glaucoma mediante gonios-copia.</li>
+                        <li>Estudio de la salud del fondo del Ojo.</li>
+                        <li>Cobertura adicional de montura o lentes: USD15$.</li>
+                        <li>Emergencias Diurnas: son atendidas por un oftalmólogo a escala Nacional.</li>
+                        <li>Emergencias Nocturnas: son atendidas vía telefónica por un oftalmólogo de guardia.</li>
+                    </ul>
+                `
+            },
+            "10-14-2000928": { // SOLOSON IMPORT, C.A (Original fixed content, now used as default)
+                contratante: "SOLOSON IMPORT, C.A", 
+                polizaNro: "10-14-2000928",
+                intermediario: "CASTRILLO PALACIOS, JAIME JOSE",
+                vigencia: "16-03-2025 / 16-03-2026",
+                moneda: "DOLARES",
+                coberturas: [
+                    { name: "Suma Asegurada Básica", limits: ["7.000", "12.000", "25.000"] },
+                    { name: "Continuidad", limits: ["7.000", "12.000", "25.000"] },
+                    { name: "Covid-19", limits: ["7.000", "12.000", "25.000"] },
+                    { name: "Atención Medica Primaria De Salud", limits: ["2.000", "2.500", "5.000"] },
+                    { name: "Maternidad", limits: ["No contrata", "No contrata", "No contrata"] }, 
+                    { name: "Asistencia Médica Domiciliaria", limits: ["Incluido", "Incluido", "Incluido"] },
+                    { name: "Servicios de Odontología", limits: ["Por servicio", "Por servicio", "Por servicio"] },
+                    { name: "Servicios de Oftalmológica", limits: ["Por servicio", "Por servicio", "Por servicio"] }
+                ],
+                // Default content for services (if not overridden by specific policy)
+                servicioDomiciliario: `
+                    <h3>Servicio de Asistencia Médica Domiciliaria:</h3>
+                    <p>Atención médica profesional, las 24 horas del día, los 365 días del año.</p>
+                    <p>Este servicio incluye:</p>
+                    <ul>
+                        <li><b>Orientación médica telefónica:</b> Un médico te atenderá por teléfono para brindarte orientación médica, responder a tus preguntas y darte las recomendaciones necesarias.</li>
+                        <li><b>Orientación médica virtual:</b> A través de una video llamada, un médico podrá evaluarte, darte un diagnóstico y recetarte medicamentos si es necesario.</li>
+                        <li><b>Asistencia médica presencial:</b> Un equipo médico se trasladará a tu domicilio para atenderte, estabilizar tu situación de salud, aplicación de tratamientos en unidosis y si es necesario, remitirte a un centro hospitalario.</li>
+                        <li><b>Traslado en ambulancia:</b> En caso de que requieras atención hospitalaria urgente, te trasladaremos en una ambulancia equipada con todo lo necesario para garantizar tu seguridad y bienestar.</li>
+                        <li><b>Traslados programados:</b> Traslado en unidades especiales a centros hospitalarios para controles, estudios, altas médicas (con 48 horas de anticipación).</li>
+                        <li><b>Seguimiento médico post asistencia:</b> Un médico te dará seguimiento telefónico para monitorear tu evolución y asegurarte de que te estás recuperando adecuadamente.</li>
+                        <li><b>Entrega de medicamentos hasta por 7 días</b> (en caso de tratamientos agudos).</li>
+                        <li><b>Cobertura nacional:</b> Atención médica las 24 horas del día, los 365 días del año en todo el territorio nacional. En casos especiales, se gestionan puntos de encuentro.</li>
+                    </ul>
+                `,
+                atencionPrimaria: `
+                    <h3>Servicio de Atención Médica Primaria: Por año póliza</h3>
+                    <h4>¿Qué cubre mi cobertura de Atención Médica Primaria?</h4>
+                    <p>A través del servicio de Atención Médica Primaria, se podrán gestionar hasta el límite del servicios o suma asegurada contratada y disponible para el momento de la solicitud el siguiente protocolo según su alcance:</p>
+                    <ol>
+                        <li><b>Consulta Médica de Primer Contacto</b><br>Gestionadas por médicos de primer contacto: Generales, Internistas, Familiares, Pediatras.</li>
+                        <li><b>Consulta Médica con Especialista</b><br>Referidos por los médicos de primer contacto: Traumatología, Cardiología, Neumología, Otorrinolaringología, Gastroenterología, Fisiatría, Oncología, nefrología, Endocrinología, entre otras.</li>
+                        <li><b>Exámenes | Estudios | Laboratorios</b><br>Rx | Exámenes de Laboratorio | Ecosonogramas | Electrocardiogramas, otros estudios serán aprobados de acuerdo con el baremo establecido, A fin de determinar un diagnóstico y su tratamiento.</li>
+                    </ol>
+                `,
+                servicioOdontologico: `
+                    <h3>Descripción del Servicio Odontológico</h3>
+                    <ul>
+                        <li>Consultas a Nivel Nacional - Examen e Historia Clínica/ Diagnóstico/Plan de Tratamiento.</li>
+                        <li>2 Limpiezas simples y remoción del cálculo dental.</li>
+                        <li>2 Pulidos o remoción de manchas en esmalte dental.</li>
+                        <li>1 Aplicación tópica de flúor (hasta 12 años de edad).</li>
+                        <li>1 Aplicación de sellantes de fosas en molares (hasta 12 años de edad).</li>
+                        <li>Educación y Técnica del Cepillado.</li>
+                        <li>2 Extracciones simples.</li>
+                        <li>2 Extracciones quirúrgicas.</li>
+                        <li>Rayos X tomados por el odontólogo en el consultorio: coronales y peri-apicales (2 al año por asegurado).</li>
+                        <li>Panorámica (una al año por asegurado).</li>
+                        <li>4 resinas o amalgamas en dientes anteriores y posteriores.</li>
+                        <li>1 tratamiento conductivo en adultos y niños.</li>
+                        <li>2 restauraciones en el cuello del diente, vidrio econométrico, ya sea como base cavilaría clase V.</li>
+                        <li>2 pulpotomia y 2 pulpectomia</li>
+                        <li>Emergencias odontológicas en dientes, encías o prótesis.</li>
+                        <li>Emergencias Diurnas: son atendidas por un odontólogo a escala Nacional.</li>
+                        <li>Emergencias Nocturnas: son atendidas por un odontólogo de guardia.</li>
+                    </ul>
+                `,
+                servicioOftalmologico: `
+                    <h3>Descripción del Servicio Oftalmológico</h3>
+                    <ul>
+                        <li>Consultas a escala Nacional.</li>
+                        <li>Examen e historia clínica, diagnóstico y plan de tratamiento (2 al año por asegurado).</li>
+                        <li>Balance de los Movimientos Oculares.</li>
+                        <li>Discriminación de colores.</li>
+                        <li>Estudio de la Córnea, conjuntiva, cámara anterior, pupila y cristalino con lámpara de hendidura.</li>
+                        <li>Detección de glaucoma mediante gonios-copia.</li>
+                        <li>Estudio de la salud del fondo del Ojo.</li>
+                        <li>Cobertura adicional de montura o lentes: USD15$.</li>
+                        <li>Emergencias Diurnas: son atendidas por un oftalmólogo a escala Nacional.</li>
+                        <li>Emergencias Nocturnas: son atendidas vía telefónica por un oftalmólogo de guardia.</li>
+                    </ul>
+                `
+            },
+            "10-14-2000926": { // TRANPORTES LUGA S.R.L
+                contratante: "TRANSPORTES LUGA S.R.L",
+                polizaNro: "10-14-2000926",
+                intermediario: "CASTRILLO PALACIOS, JAIME JOSE",
+                vigencia: "16-03-2025 / 16-03-2026",
+                moneda: "DOLARES",
+                coberturas: [
+                    { name: "Suma Asegurada Básica", limits: ["7.000", "12.000", "25.000"] },
+                    { name: "Continuidad", limits: ["7.000", "12.000", "25.000"] },
+                    { name: "Covid-19", limits: ["7.000", "12.000", "25.000"] },
+                    { name: "Atención Medica Primaria De Salud", limits: ["2.000", "2.500", "5.000"] },
+                    { name: "Maternidad", limits: ["3.000", "4.000", "No contrata"] },
+                    { name: "Asistencia Médica Domiciliaria", limits: ["Incluido", "Incluido", "Incluido"] },
+                    { name: "Servicios de Odontología", limits: ["Por servicio", "Por servicio", "Por servicio"] },
+                    { name: "Servicios de Oftalmológica", limits: ["Por servicio", "Por servicio", "Por servicio"] }
+                ],
+                servicioDomiciliario: `
+                    <h3>Servicio de Asistencia Médica Domiciliaria:</h3>
+                    <p>Atención médica profesional, las 24 horas del día, los 365 días del año.</p>
+                    <p>Este servicio incluye:</p>
+                    <ul>
+                        <li><b>Orientación médica telefónica:</b> Un médico te atenderá por teléfono para brindarte orientación médica, responder a tus preguntas y darte las recomendaciones necesarias.</li>
+                        <li><b>Orientación médica virtual:</b> A través de una video llamada, un médico podrá evaluarte, darte un diagnóstico y recetarte medicamentos si es necesario.</li>
+                        <li><b>Asistencia médica presencial:</b> Un equipo médico se trasladará a tu domicilio para atenderte, estabilizar tu situación de salud, aplicación de tratamientos en unidosis y si es necesario, remitirte a un centro hospitalario.</li>
+                        <li><b>Traslado en ambulancia:</b> En caso de que requieras atención hospitalaria urgente, te trasladaremos en una ambulancia equipada con todo lo necesario para garantizar tu seguridad y bienestar.</li>
+                        <li><b>Traslados programados:</b> Traslado en unidades especiales a centros hospitalarios para controles, estudios, altas médicas (con 48 horas de anticipación).</li>
+                        <li><b>Seguimiento médico post asistencia:</b> Un médico te dará seguimiento telefónico para monitorear tu evolución y asegurarte de que te estás recuperando adecuadamente.</li>
+                        <li><b>Entrega de medicamentos hasta por 7 días</b> (en caso de tratamientos agudos).</li>
+                        <li><b>Cobertura nacional:</b> Atención médica las 24 horas del día, los 365 días del año en todo el territorio nacional. En casos especiales, se gestionan puntos de encuentro.</li>
+                    </ul>
+                `,
+                atencionPrimaria: `
+                    <h3>Servicio de Atención Médica Primaria: Por año póliza</h3>
+                    <h4>¿Qué cubre mi cobertura de Atención Médica Primaria?</h4>
+                    <p>A través del servicio de Atención Médica Primaria, se podrán gestionar hasta el límite del servicios o suma asegurada contratada y disponible para el momento de la solicitud el siguiente protocolo según su alcance:</p>
+                    <ol>
+                        <li><b>Consulta Médica de Primer Contacto</b><br>Gestionadas por médicos de primer contacto: Generales, Internistas, Familiares, Pediatras.</li>
+                        <li><b>Consulta Médica con Especialista</b><br>Referidos por los médicos de primer contacto: Traumatología, Cardiología, Neumología, Otorrinolaringología, Gastroenterología, Fisiatría, Oncología, nefrología, Endocrinología, entre otras.</li>
+                        <li><b>Exámenes | Estudios | Laboratorios</b><br>Rx | Exámenes de Laboratorio | Ecosonogramas | Electrocardiogramas, otros estudios serán aprobados de acuerdo con el baremo establecido, A fin de determinar un diagnóstico y su tratamiento.</li>
+                    </ol>
+                `,
+                servicioOdontologico: `
+                    <h3>Descripción del Servicio Odontológico</h3>
+                    <ul>
+                        <li>Consultas a Nivel Nacional - Examen e Historia Clínica/ Diagnóstico/Plan de Tratamiento.</li>
+                        <li>2 Limpiezas simples y remoción del cálculo dental.</li>
+                        <li>2 Pulidos o remoción de manchas en esmalte dental.</li>
+                        <li>1 Aplicación tópica de flúor (hasta 12 años de edad).</li>
+                        <li>1 Aplicación de sellantes de fosas en molares (hasta 12 años de edad).</li>
+                        <li>Educación y Técnica del Cepillado.</li>
+                        <li>2 Extracciones simples.</li>
+                        <li>2 Extracciones quirúrgicas.</li>
+                        <li>Rayos X tomados por el odontólogo en el consultorio: coronales y peri-apicales (2 al año por asegurado).</li>
+                        <li>Panorámica (una al año por asegurado).</li>
+                        <li>4 resinas o amalgamas en dientes anteriores y posteriores.</li>
+                        <li>1 tratamiento conductivo en adultos y niños.</li>
+                        <li>2 restauraciones en el cuello del diente, vidrio econométrico, ya sea como base cavilaría clase V.</li>
+                        <li>2 pulpotomia y 2 pulpectomia</li>
+                        <li>Emergencias odontológicas en dientes, encías o prótesis.</li>
+                        <li>Emergencias Diurnas: son atendidas por un odontólogo a escala Nacional.</li>
+                        <li>Emergencias Nocturnas: son atendidas por un odontólogo de guardia.</li>
+                    </ul>
+                `,
+                servicioOftalmologico: `
+                    <h3>Descripción del Servicio Oftalmológico</h3>
+                    <ul>
+                        <li>Consultas a escala Nacional.</li>
+                        <li>Examen e historia clínica, diagnóstico y plan de tratamiento (2 al año por asegurado).</li>
+                        <li>Balance de los Movimientos Oculares.</li>
+                        <li>Discriminación de colores.</li>
+                        <li>Estudio de la Córnea, conjuntiva, cámara anterior, pupila y cristalino con lámpara de hendidura.</li>
+                        <li>Detección de glaucoma mediante gonios-copia.</li>
+                        <li>Estudio de la salud del fondo del Ojo.</li>
+                        <li>Cobertura adicional de montura o lentes: USD15$.</li>
+                        <li>Emergencias Diurnas: son atendidas por un oftalmólogo a escala Nacional.</li>
+                        <li>Emergencias Nocturnas: son atendidas vía telefónica por un oftalmólogo de guardia.</li>
+                    </ul>
+                `
+            },
+            "10-14-2001068": { // ESTAR SEGUROS, S.A. (Nuevo Contratante)
+                contratante: "ESTAR SEGUROS, S.A.",
+                polizaNro: "10-14-2001068",
+                intermediario: "ESTAR SEGUROS, S.A.",
+                vigencia: "01-04-2025 / 01-04-2026",
+                moneda: "DOLARES",
+                coberturas: [
+                    { name: "Suma Asegurada Básica", limits: ["7.000", "10.000", "15.000", "20.000"] },
+                    { name: "Continuidad", limits: ["7.000", "10.000", "15.000", "20.000"] },
+                    { name: "Covid-19", limits: ["7.000", "10.000", "15.000", "20.000"] },
+                    { name: "Atención Medica Primaria De Salud", limits: ["1.500", "2.000", "2.500", "3.500"] },
+                    { name: "Maternidad", limits: ["1.500", "2.000", "2.500", "3.500"] },
+                    { name: "Asistencia Médica Domiciliaria", limits: ["Incluido", "Incluido", "Incluido", "Incluido"] },
+                    { name: "Servicios de Odontología", limits: ["Por servicio", "Por servicio", "Por servicio", "Por servicio"] },
+                    { name: "Servicios de Oftalmológica", limits: ["Por servicio", "Por servicio", "Por servicio", "Por servicio"] },
+                    { name: "Servicio por farmacia (limite P/P)", limits: ["$500 Anual / $45 Mensual", "$500 Anual / $45 Mensual", "$500 Anual / $45 Mensual", "$500 Anual / $45 Mensual"] } // Custom formatting for combined limits
+                ],
+                // Contenido específico para ESTAR SEGUROS, S.A.
+                servicioDomiciliario: `
+                    <h3>Servicio de Asistencia Médica Domiciliaria:</h3>
+                    <p>Atención médica profesional, las 24 horas del día, los 365 días del año.</p>
+                    <p>Este servicio incluye:</p>
+                    <ul>
+                        <li><b>Orientación médica telefónica:</b> Un médico te atenderá por teléfono para brindarte orientación médica, responder a tus preguntas y darte las recomendaciones necesarias.</li>
+                        <li><b>Orientación médica virtual:</b> A través de una video llamada, un médico podrá evaluarte, darte un diagnóstico y recetarte medicamentos si es necesario.</li>
+                        <li><b>Asistencia médica presencial:</b> Un equipo médico se trasladará a tu domicilio para atenderte, estabilizar tu situación de salud, aplicación de tratamientos en unidosis y si es necesario, remitirte a un centro hospitalario.</li>
+                        <li><b>Traslado en ambulancia:</b> En caso de que requieras atención hospitalaria urgente, te trasladaremos en una ambulancia equipada con todo lo necesario para garantizar tu seguridad y bienestar.</li>
+                        <li><b>Traslados programados:</b> Traslado en unidades especiales a centros hospitalarios para controles, estudios, altas médicas (con 48 horas de anticipación).</li>
+                        <li><b>Seguimiento médico post asistencia:</b> Un médico te dará seguimiento telefónico para monitorear tu evolución y asegurarte de que te estás recuperando adecuadamente.</li>
+                        <li><b>Entrega de medicamentos hasta por 7 días</b> (en caso de tratamientos agudos).</li>
+                        <li><b>Cobertura nacional:</b> Atención médica las 24 horas del día, los 365 días del año en todo el territorio nacional. En casos especiales, se gestionan puntos de encuentro.</li>
+                    </ul>
+                `,
+                atencionPrimaria: `
+                    <h3>Servicio de Atención Médica Primaria: Por año póliza</h3>
+                    <h4>¿Qué cubre mi cobertura de Atención Médica Primaria?</h4>
+                    <p>A través del servicio de Atención Médica Primaria, se podrán gestionar hasta el límite del servicios o suma asegurada contratada y disponible para el momento de la solicitud el siguiente protocolo según su alcance:</p>
+                    <ol>
+                        <li><b>Consulta Médica de Primer Contacto</b><br>Gestionadas por médicos de primer contacto: Generales, Internistas, Familiares, Pediatras.</li>
+                        <li><b>Consulta Médica con Especialista</b><br>Referidos por los médicos de primer contacto: Traumatología, Cardiología, Neumología, Otorrinolaringología, Gastroenterología, Fisiatría, Oncología, nefrología, Endocrinología, entre otras.</li>
+                        <li><b>Exámenes | Estudios | Laboratorios</b><br>Rx | Exámenes de Laboratorio | Ecosonogramas | Electrocardiogramas, otros estudios serán aprobados de acuerdo con el baremo establecido, A fin de determinar un diagnóstico y su tratamiento.</li>
+                    </ol>
+                `,
+                servicioOdontologico: `
+                    <h3>Descripción del Servicio Odontológico</h3>
+                    <ul>
+                        <li>Consultas a Nivel Nacional - Examen e Historia Clínica/ Diagnóstico/Plan de Tratamiento.</li>
+                        <li>2 Limpiezas simples y remoción del cálculo dental.</li>
+                        <li>2 Pulidos o remoción de manchas en esmalte dental.</li>
+                        <li>1 Aplicación tópica de flúor (hasta 12 años de edad).</li>
+                        <li>1 Aplicación de sellantes de fosas en molares (hasta 12 años de edad).</li>
+                        <li>Educación y Técnica del Cepillado.</li>
+                        <li>2 Extracciones simples.</li>
+                        <li>2 Extracciones quirúrgicas.</li>
+                        <li>Rayos X tomados por el odontólogo en el consultorio: coronales y peri-apicales (2 al año por asegurado).</li>
+                        <li>Panorámica (una al año por asegurado).</li>
+                        <li>4 resinas o amalgamas en dientes anteriores y posteriores.</li>
+                        <li>1 tratamiento conductivo en adultos y niños.</li>
+                        <li>2 restauraciones en el cuello del diente, vidrio econométrico, ya sea como base cavilaría clase V.</li>
+                        <li>2 pulpotomia y 2 pulpectomia</li>
+                        <li>Emergencias odontológicas en dientes, encías o prótesis.</li>
+                        <li>Emergencias Diurnas: son atendidas por un odontólogo a escala Nacional.</li>
+                        <li>Emergencias Nocturnas: son atendidas por un odontólogo de guardia.</li>
+                    </ul>
+                `,
+                servicioOftalmologico: `
+                    <h3>Descripción del Servicio Oftalmológico</h3>
+                    <ul>
+                        <li>Consultas a escala Nacional.</li>
+                        <li>Examen e historia clínica, diagnóstico y plan de tratamiento (2 al año por asegurado).</li>
+                        <li>Estudio de la Agudeza visual.</li>
+                        <li>Balance de los Movimientos Oculares.</li>
+                        <li>Discriminación de colores.</li>
+                        <li>Estudio de la Córnea, conjuntiva, cámara anterior, pupila y cristalino con lámpara de hendidura.</li>
+                        <li>Detección de glaucoma mediante gonios-copia.</li>
+                        <li>Estudio de la salud del fondo del Ojo.</li>
+                        <li>Cobertura adicional de montura o lentes: USD15$.</li>
+                        <li>Emergencias Diurnas: son atendidas por un oftalmólogo a escala Nacional.</li>
+                        <li>Emergencias Nocturnas: son atendidas vía telefónica por un oftalmólogo de guardia.</li>
+                    </ul>
+                `,
+                servicioMedicamentos: `
+                    <h3>Servicio Suministro de Medicamentos:</h3>
+                    <p>Este servicio te ayuda a obtener los medicamentos que necesitas para tratamientos de enfermedades agudas, crónicas o lesiones por accidentes. La cantidad de medicinas no puede exceder la dosis para un (1) mes de tratamiento.</p>
+                    <p>El servicio cuenta con un monto máximo anual de $500, sin exceder un límite mensual de $45. La entrega de medicamentos y cantidades autorizadas se realiza según la disponibilidad.</p>
+                    <h4>Ten a mano los siguientes documentos (recuerda que el informe médico y los récipes deben estar firmados y sellados por el médico tratante):</h4>
+                    <ul>
+                        <li>Copia de su cédula de identidad del titular y beneficiario</li>
+                        <li>Informe médico amplio y detallado (firmado y sellado por el médico tratante)</li>
+                        <li>Récipes e Indicaciones (firmado y sellado por el médico tratante)</li>
+                        <li>Autorización firmada y con copia de la cedula de identidad del titular y del autorizado. (Solo aplica para retiros por terceros)</li>
+                    </ul>
+                    <h4>La Vigencia del Informe Médico | Récipes e Indicaciones es la siguiente:</h4>
+                    <ul>
+                        <li>Patologías Agudas: Treinta días (30)</li>
+                        <li>Patologías Crónicas: Cuatro meses (4)</li>
+                    </ul>
+                    <p>Se realizará la entrega de medicamentos y cantidades autorizadas en la orden de acuerdo con su disponibilidad.</p>
+                `
+            },
+            "10-14-2001102": { // PLAYA GRANDE YACHTING CLUB A.C.
+                contratante: "PLAYA GRANDE YACHTING CLUB A.C.",
+                polizaNro: "10-14-2001102",
+                intermediario: "TARGA ARANGUREN JUAN IGNACIO",
+                vigencia: "31-07-2025 / 31-07-2026",
+                moneda: "DOLARES",
+                coberturas: [
+                    { name: "Hospitalización y Cirugía", limits: ["9.000"] },
+                    { name: "Continuidad Hospitalización y Cirugía", limits: ["9.000"] },
+                    { name: "Deducible", limits: ["100"] },
+                    { name: "Covid-19", limits: ["9.000"] },
+                    { name: "Atención Medica Primaria De Salud", limits: ["1.000"] },
+                    { name: "Asistencia Médica Domiciliaria", limits: ["Incluido"] }
+                ],
+                servicioDomiciliario: `
+                    <h3>Servicio de Asistencia Médica Domiciliaria:</h3>
+                    <p>Atención médica profesional, las 24 horas del día, los 365 días del año.</p>
+                    <p>Este servicio incluye:</p>
+                    <ul>
+                        <li><b>Orientación médica telefónica:</b> Un médico te atenderá por teléfono para brindarte orientación médica, responder a tus preguntas y darte las recomendaciones necesarias.</li>
+                        <li><b>Orientación médica virtual:</b> A través de una video llamada, un médico podrá evaluarte, darte un diagnóstico y recetarte medicamentos si es necesario.</li>
+                        <li><b>Asistencia médica presencial:</b> Un equipo médico se trasladará a tu domicilio para atenderte, estabilizar tu situación de salud, aplicación de tratamientos en unidosis y si es necesario, remitirte a un centro hospitalario.</li>
+                        <li><b>Traslado en ambulancia:</b> En caso de que requieras atención hospitalaria urgente, te trasladaremos en una ambulancia equipada con todo lo necesario para garantizar tu seguridad y bienestar.</li>
+                        <li><b>Traslados programados:</b> Traslado en unidades especiales a centros hospitalarios para controles, estudios, altas médicas (con 48 horas de anticipación).</li>
+                        <li><b>Seguimiento médico post asistencia:</b> Un médico te dará seguimiento telefónico para monitorear tu evolución y asegurarte de que te estás recuperando adecuadamente.</li>
+                        <li><b>Entrega de medicamentos hasta por 7 días</b> (en caso de tratamientos agudos).</li>
+                        <li><b>Cobertura nacional:</b> Atención médica las 24 horas del día, los 365 días del año en todo el territorio nacional. En casos especiales, se gestionan puntos de encuentro.</li>
+                    </ul>
+                `,
+                atencionPrimaria: `
+                    <h3>Servicio de Atención Médica Primaria: Por año póliza</h3>
+                    <h4>¿Qué cubre mi cobertura de Atención Médica Primaria?</h4>
+                    <p>A través del servicio de Atención Médica Primaria, se podrán gestionar hasta el límite del servicios o suma asegurada contratada y disponible para el momento de la solicitud el siguiente protocolo según su alcance:</p>
+                    <ol>
+                        <li><b>Consulta Médica de Primer Contacto</b><br>Gestionadas por médicos de primer contacto: Generales, Internistas, Familiares, Pediatras.</li>
+                        <li><b>Consulta Médica con Especialista</b><br>Referidos por los médicos de primer contacto: Traumatología, Cardiología, Neumología, Otorrinolaringología, Gastroenterología, Fisiatría, Oncología, nefrología, Endocrinología, entre otras.</li>
+                        <li><b>Exámenes | Estudios | Laboratorios</b><br>Rx | Exámenes de Laboratorio | Ecosonogramas | Electrocardiogramas, otros estudios serán aprobados de acuerdo con el baremo establecido, A fin de determinar un diagnóstico y su tratamiento.</li>
+                    </ol>
+                `,
+            },
+            "09-14-2000026": { // CABLE PAR C.A.
+                contratante: "CABLE PAR C.A.",
+                polizaNro: "09-14-2000026",
+                intermediario: "SANZ FLORES WALTER EFREN",
+                vigencia: "29-07-2025 / 29-07-2026",
+                moneda: "DOLARES",
+                coberturas: [
+                    { name: "Hospitalización y Cirugía", limits: ["20.000"] },
+                    { name: "Continuidad Hospitalización y Cirugía", limits: ["20.000"] },
+                    { name: "Covid-19", limits: ["20.000"] },
+                    { name: "Atención Medica Primaria De Salud", limits: ["1.000"] },
+                    { name: "Asistencia Médica Domiciliaria", limits: ["Incluido"] },
+                    { name: "Servicios de Odontología", limits: ["Por servicio"] },
+                    { name: "Servicios de Oftalmológica", limits: ["Por servicio"] },
+                    { name: "Servicios Funerarios", limits: ["3.000"] } // Se mantiene aquí para mostrar en la tabla de coberturas
+                ],
+                servicioDomiciliario: `
+                    <h3>Servicio de Asistencia Médica Domiciliaria:</h3>
+                    <p>Atención médica profesional, las 24 horas del día, los 365 días del año.</p>
+                    <p>Este servicio incluye:</p>
+                    <ul>
+                        <li><b>Orientación médica telefónica:</b> Un médico te atenderá por teléfono para brindarte orientación médica, responder a tus preguntas y darte las recomendaciones necesarias.</li>
+                        <li><b>Orientación médica virtual:</b> A través de una video llamada, un médico podrá evaluarte, darte un diagnóstico y recetarte medicamentos si es necesario.</li>
+                        <li><b>Asistencia médica presencial:</b> Un equipo médico se trasladará a tu domicilio para atenderte, estabilizar tu situación de salud, aplicación de tratamientos en unidosis y si es necesario, remitirte a un centro hospitalario.</li>
+                        <li><b>Traslado en ambulancia:</b> En caso de que requieras atención hospitalaria urgente, te trasladaremos en una ambulancia equipada con todo lo necesario para garantizar tu seguridad y bienestar.</li>
+                        <li><b>Traslados programados:</b> Traslado en unidades especiales a centros hospitalarios para controles, estudios, altas médicas (con 48 horas de anticipación).</li>
+                        <li><b>Seguimiento médico post asistencia:</b> Un médico te dará seguimiento telefónico para monitorear tu evolución y asegurarte de que te estás recuperando adecuadamente.</li>
+                        <li><b>Entrega de medicamentos hasta por 7 días</b> (en caso de tratamientos agudos).</li>
+                        <li><b>Cobertura nacional:</b> Atención médica las 24 horas del día, los 365 días del año en todo el territorio nacional. En casos especiales, se gestionan puntos de encuentro.</li>
+                    </ul>
+                `,
+                atencionPrimaria: `
+                    <h3>Servicio de Atención Médica Primaria: Por año póliza</h3>
+                    <h4>¿Qué cubre mi cobertura de Atención Médica Primaria?</h4>
+                    <p>A través del servicio de Atención Médica Primaria, se podrán gestionar hasta el límite del servicios o suma asegurada contratada y disponible para el momento de la solicitud el siguiente protocolo según su alcance:</p>
+                    <ol>
+                        <li><b>Consulta Médica de Primer Contacto</b><br>Gestionadas por médicos de primer contacto: Generales, Internistas, Familiares, Pediatras.</li>
+                        <li><b>Consulta Médica con Especialista</b><br>Referidos por los médicos de primer contacto: Traumatología, Cardiología, Neumología, Otorrinolaringología, Gastroenterología, Fisiatría, Oncología, nefrología, Endocrinología, entre otras.</li>
+                        <li><b>Exámenes | Estudios | Laboratorios</b><br>Rx | Exámenes de Laboratorio | Ecosonogramas | Electrocardiogramas, otros estudios serán aprobados de acuerdo con el baremo establecido, A fin de determinar un diagnóstico y su tratamiento.</li>
+                    </ol>
+                `,
+                servicioOdontologico: `
+                    <h3>Descripción del Servicio Odontológico</h3>
+                    <p>En caso de requerir los servicios personalizados de Odontología, Llama a nuestro Contact Center: Comunícate con nosotros al 0500- ESTAROK (3782765), opciones 1-2-1, o a través del siguiente número en caso de contingencia 0212 3135564.</p>
+                    <ul>
+                        <li>Consultas a Nivel Nacional - Examen e Historia Clínica/ Diagnóstico/Plan de Tratamiento.</li>
+                        <li>2 limpiezas simples y remoción del cálculo dental.</li>
+                        <li>2 pulidos o remoción de manchas en esmalte dental.</li>
+                        <li>1 aplicación tópica de flúor (hasta 12 años de edad).</li>
+                        <li>1 aplicación de sellantes de fosas en molares (hasta 12 años de edad)</li>
+                        <li>Educación y Técnica del Cepillado.</li>
+                        <li>2 extracciones simples.</li>
+                        <li>2 extracciones quirúrgicas.</li>
+                        <li>Rayos X tomados por el odontólogo en el consultorio: coronales y peri-apicales (2 al año por asegurado).</li>
+                        <li>Panorámica (una al año por asegurado).</li>
+                        <li>4 resinas o amalgamas en dientes anteriores y posteriores.</li>
+                        <li>1 tratamiento conductivo en adultos y niños.</li>
+                        <li>2 restauraciones en el cuello del diente, vidrio econométrico, ya sea como base cavilaría clase V.</li>
+                        <li>2 pulpotomía y 2 pulpectomía</li>
+                        <li>Emergencias odontológicas en dientes, encías o prótesis.</li>
+                        <li>Emergencias Diurnas: son atendidas por un odontólogo a escala Nacional.</li>
+                        <li>Emergencias Nocturnas: son atendidas por un odontólogo de guardia.</li>
+                    </ul>
+                `,
+                servicioOftalmologico: `
+                    <h3>Descripción del Servicio Oftalmológico</h3>
+                    <p>En caso de requerir los servicios personalizados de Oftalmología, Llama a nuestro Contact Center: Comunícate con nosotros al 0500- ESTAROK (3782765), opciones 1-2-1, o a través del siguiente número en caso de contingencia 0212 3135564.</p>
+                    <ul>
+                        <li>Consultas a escala Nacional.</li>
+                        <li>Examen e historia clínica, diagnóstico y plan de tratamiento (2 al año por asegurado).</li>
+                        <li>Estudio de la Agudeza visual.</li>
+                        <li>Balance de los Movimientos Oculares</li>
+                        <li>Discriminación de colores</li>
+                        <li>Estudio de la Córnea, conjuntiva, cámara anterior, pupila y cristalino con lámpara de hendidura</li>
+                        <li>Detección de glaucoma mediante gonios-copia</li>
+                        <li>Estudio de la salud del fondo del Ojo.</li>
+                        <li>Cobertura adicional de montura o lentes: USD15$</li>
+                        <li>Emergencias Diurnas: son atendidas por un oftalmólogo a escala Nacional.</li>
+                        <li>Emergencias Nocturnas: son atendidas vía telefónica por un oftalmólogo de guardia.</li>
+                    </ul>
+                `,
+                servicioFunerarios: `
+                    <h3>Servicios Funerarios:</h3>
+                    <p>Este servicio cubre los gastos de un servicio funerario estándar con un límite de USD 3.000.</p>
+                    <p>Para coordinar este servicio, comuníquese con el Contact Center.</p>
+                `
+            }
+        };
+        // Referencia a la póliza de Soloson para el contenido fijo (se usa para los contenidos de servicio si no se especifica para otra póliza)
+        const fixedPolicyContent = policyData["10-14-2000928"];
+        // Función para cargar los datos de la póliza seleccionada
+        function loadPolicyData() {
+            const selector = document.getElementById('policySelector');
+            const selectedPolicyKey = selector.value;
+            const policyNumberSpan = document.getElementById('policy-number');
+            const policyVigenciaSpan = document.getElementById('policy-vigencia');
+            const policyIntermediarioSpan = document.getElementById('policy-intermediario');
+            const policyMonedaSpan = document.getElementById('policy-moneda');
+            const coberturasTableHead = document.querySelector('#coberturas-table thead');
+            const coberturasTableBody = document.querySelector('#coberturas-table tbody');
+            const servicioDomiciliarioContent = document.getElementById('panel-domiciliaria');
+            const atencionPrimariaContent = document.getElementById('panel-primaria');
+            const servicioOdontologicoContent = document.getElementById('panel3');
+            const servicioOftalmologicoContent = document.getElementById('panel4');
+            const medicamentosSection = document.getElementById('medicamentos-section');
+            const servicioMedicamentosContent = document.getElementById('panel-medicamentos');
+            // La sección de funerarios ya no se controla como un acordeón independiente
+            // Obtener referencias a los contenedores de acordeón para Odontología y Oftalmología
+            const odontologiaAccordionItem = document.getElementById('odontologia-accordion-item');
+            const oftalmologiaAccordionItem = document.getElementById('oftalmologia-accordion-item');
+            
+            if (selectedPolicyKey && policyData[selectedPolicyKey]) {
+                const data = policyData[selectedPolicyKey];
+                
+                // Actualizar los datos de la póliza en el encabezado
+                policyNumberSpan.textContent = data.polizaNro;
+                policyVigenciaSpan.textContent = data.vigencia;
+                policyIntermediarioSpan.textContent = data.intermediario;
+                policyMonedaSpan.textContent = data.moneda;
+                
+                // Generar los encabezados de la tabla de coberturas dinámicamente
+                coberturasTableHead.innerHTML = ''; // Limpiar encabezados existentes
+                const maxLimits = data.coberturas.reduce((max, curr) => Math.max(max, curr.limits.length), 0);
+                let headerRow1 = `<tr><th rowspan="2">Cobertura</th><th colspan="${maxLimits}" style="text-align: center;">Límite USD</th></tr>`;
+                let headerRow2 = `<tr>`;
+                for (let i = 1; i <= maxLimits; i++) {
+                    headerRow2 += `<th style="text-align: center;">Plan ${i}</th>`;
+                }
+                headerRow2 += `</tr>`;
+                coberturasTableHead.innerHTML = headerRow1 + headerRow2;
+                
+                // Cargar el contenido de coberturas específico para la póliza seleccionada
+                coberturasTableBody.innerHTML = '';
+                data.coberturas.forEach(item => {
+                    const row = coberturasTableBody.insertRow();
+                    const nameCell = row.insertCell();
+                    nameCell.textContent = item.name;
+                    // Insertar las celdas para cada límite
+                    item.limits.forEach(limit => {
+                        const limitCell = row.insertCell();
+                        if (limit.includes("Incluido") || limit.includes("No contrata") || limit.includes("Por servicio")) {
+                             limitCell.innerHTML = `<span class="${limit.includes("Incluido") ? 'included' : ''}">${limit}</span>`;
+                        } else {
+                            // Para números como "100" o "9.000", mostramos la cadena tal cual para preservar el formato deseado
+                            limitCell.textContent = limit;
+                        }
+                    });
+                    // Add empty cells if a row has fewer limits than the maximum
+                    for (let i = item.limits.length; i < maxLimits; i++) {
+                        row.insertCell().textContent = ''; // Empty cell for alignment
+                    }
+                });
+                
+                // Cargar los contenidos de los servicios.
+                // Asistencia Médica Domiciliaria
+                servicioDomiciliarioContent.innerHTML = data.servicioDomiciliario || fixedPolicyContent.servicioDomiciliario;
+                // Atención Médica Primaria
+                atencionPrimariaContent.innerHTML = data.atencionPrimaria || fixedPolicyContent.atencionPrimaria;
+                // Controlar la visibilidad de Odontología
+                if (data.servicioOdontologico) {
+                    odontologiaAccordionItem.style.display = 'block';
+                    servicioOdontologicoContent.innerHTML = data.servicioOdontologico;
+                } else {
+                    odontologiaAccordionItem.style.display = 'none';
+                    servicioOdontologicoContent.innerHTML = ''; // Limpiar el contenido si se oculta
+                }
+                // Controlar la visibilidad de Oftalmología
+                if (data.servicioOftalmologico) {
+                    oftalmologiaAccordionItem.style.display = 'block';
+                    servicioOftalmologicoContent.innerHTML = data.servicioOftalmologico;
+                } else {
+                    oftalmologiaAccordionItem.style.display = 'none';
+                    servicioOftalmologicoContent.innerHTML = ''; // Limpiar el contenido si se oculta
+                }
+                
+                // Mostrar/ocultar la sección de medicamentos dinámicamente
+                if (data.servicioMedicamentos) {
+                    medicamentosSection.style.display = 'block';
+                    servicioMedicamentosContent.innerHTML = data.servicioMedicamentos;
+                } else {
+                    medicamentosSection.style.display = 'none';
+                    servicioMedicamentosContent.innerHTML = '';
+                }
+                // Los servicios funerarios solo se muestran en la tabla de coberturas, no en un acordeón.
+                // Aseguramos que cualquier rastro de una sección de acordeón de funerarios se oculte si existiera.
+                // Esto es una medida de seguridad si el HTML tuviera el div pero el JS no lo controlara.
+                const funerariosAccordionItem = document.getElementById('funerarios-section');
+                if (funerariosAccordionItem) {
+                    funerariosAccordionItem.style.display = 'none';
+                }
+            } else {
+                // Estado inicial cuando no hay póliza seleccionada o es la opción por defecto
+                policyNumberSpan.textContent = '';
+                policyVigenciaSpan.textContent = '';
+                policyIntermediarioSpan.textContent = '';
+                policyMonedaSpan.textContent = '';
+                
+                coberturasTableHead.innerHTML = ''; // Clear headers
+                coberturasTableBody.innerHTML = '<tr><td colspan="5">Seleccione un Contratante para ver los detalles de la póliza.</td></tr>'; // Adjust colspan for potential 4 plans
+                
+                servicioDomiciliarioContent.innerHTML = '<p>Seleccione un Contratante para ver los detalles del servicio de asistencia médica domiciliaria.</p>';
+                atencionPrimariaContent.innerHTML = '<p>Seleccione un Contratante para ver los detalles del servicio de atención médica primaria.</p>';
+                
+                odontologiaAccordionItem.style.display = 'none'; // Ocultar por defecto
+                servicioOdontologicoContent.innerHTML = '';
+                oftalmologiaAccordionItem.style.display = 'none'; // Ocultar por defecto
+                servicioOftalmologicoContent.innerHTML = '';
+                medicamentosSection.style.display = 'none';
+                servicioMedicamentosContent.innerHTML = '';
+                
+                // También ocultar la sección de funerarios si existiera al inicio
+                const funerariosAccordionItem = document.getElementById('funerarios-section');
+                if (funerariosAccordionItem) {
+                    funerariosAccordionItem.style.display = 'none';
+                }
+            }
+        }
+        // Función para alternar la visibilidad de los paneles del acordeón
+        function toggleAccordion(id) {
+            const content = document.getElementById(id);
+            const isExpanded = content.classList.toggle('active');
+            const icon = content.previousElementSibling.querySelector('.fa-chevron-down');
+            icon.style.transform = isExpanded ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+        // Función para descargar el contenido HTML actual de la página
+        function downloadHtml() {
+            // Obtener el contenido HTML completo de la página
+            const htmlContent = document.documentElement.outerHTML;
+            // Crear un Blob (objeto de datos inmutables) con el contenido HTML
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            // Crear un enlace temporal
+            const a = document.createElement('a');
+            // Establecer el href del enlace a una URL del Blob
+            a.href = URL.createObjectURL(blob);
+            // Establecer el nombre de archivo para la descarga
+            const selectedContratante = document.getElementById('policySelector').selectedOptions[0].textContent;
+            a.download = `resumen_poliza_${selectedContratante.replace(/[^a-zA-Z0-9]/g, '_')}.html`; // Nombre de archivo más descriptivo
+            // Simular un clic en el enlace para iniciar la descarga
+            document.body.appendChild(a); // Es necesario que el enlace esté en el DOM para poder simular el clic en algunos navegadores
+            a.click();
+            // Limpiar: remover el enlace y revocar la URL del objeto
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+        }
+        // Inicializar el selector y cargar el estado inicial al cargar la página
+        document.addEventListener('DOMContentLoaded', () => {
+            const selector = document.getElementById('policySelector');
+            // Limpiar las opciones existentes antes de añadir nuevas para evitar duplicación
+            selector.innerHTML = '<option value="">Seleccione un Contratante</option>'; 
+            // Añadir las opciones de los contratantes al selector
+            const contratantesOrdenados = [
+                "10-14-2000925", // DISTRIBUIDORA MOTOTAP, C.A.
+                "10-14-2000927", // LUBRICANTES SOLOIL, C.A
+                "10-14-2000928", // SOLOSON IMPORT, C.A
+                "10-14-2000926",  // TRANPORTES LUGA S.R.L
+                "10-14-2001068", // ESTAR SEGUROS, S.A.
+                "10-14-2001102", // PLAYA GRANDE YACHTING CLUB A.C.
+                "09-14-2000026" // CABLE PAR C.A.
+            ];
+            contratantesOrdenados.forEach(key => {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = policyData[key].contratante; // Solo el nombre del contratante
+                selector.appendChild(option);
+            });
+            
+            // Cargar el estado inicial
+            loadPolicyData();
+        });
+    </script>
+
+
+</body></html>
